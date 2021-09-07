@@ -51,8 +51,8 @@ def main():
 
 
     # Initiate communication with the devices
-    cp = COLDPLATE("COM5")
-    k = KEITHLEY6517("ASRL3::INSTR", baud_rate = 19200, sleep = 0.05)
+    cp = COLDPLATE("/dev/ttyUSB1")
+    k = KEITHLEY6517("/dev/ttyUSB1", baud_rate = 19200, sleep = 0.05)
     cpx = CPX400SP('192.168.1.131', 9221)
 
     # Functions
@@ -228,7 +228,7 @@ def main():
                                                temp_freq,
                                                temp_slope,
                                                temp_offset)
-    file_name = new_datefolder("data") + name
+    file_name = new_datefolder("../data") + name
     # Save the data
     df = pd.DataFrame(data, columns = ["current",
                                        "time",
