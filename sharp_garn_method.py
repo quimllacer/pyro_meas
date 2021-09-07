@@ -52,7 +52,7 @@ def main():
 
     # Initiate communication with the devices
     cp = COLDPLATE("/dev/ttyUSB1")
-    k = KEITHLEY6517("/dev/ttyUSB1", baud_rate = 19200, sleep = 0.05)
+    k = KEITHLEY6517("ASRL3:/dev/ttyUSB0:INSTR", baud_rate = 19200, sleep = 0.05)
     cpx = CPX400SP('192.168.1.131', 9221)
 
     # Functions
