@@ -31,15 +31,15 @@ def main():
     # Set parameters
     # *********************************************************************************
     sample_identification = "test_poled_pvdf_inverted_pol"
-    setup_time = 5*60 # Time allowed to the Coldplate to reach thermal the temperature offset.
-    loop_time = 15000  # Time that current vs temperature will be measured.
+    setup_time = 3*60 # Time allowed to the Coldplate to reach thermal the temperature offset.
+    loop_time = 1800  # Time that current vs temperature will be measured.
     # Temperature function
     temp_ampl = 1
     temp_freq = 0.01
     temp_slope = 0.002
-    temp_offset = 100
+    temp_offset = 80
     # Keithley
-    current_range = 200E-12 # Upper current range limit.
+    current_range = 20E-9 # Upper current range limit.
     nplcycles = 1 # Integration period based on power line frequency (0.01-10)
     average_window = 0 # Average filter window
     # Peltier cell
@@ -51,8 +51,8 @@ def main():
 
 
     # Initiate communication with the devices
-    cp = COLDPLATE("/dev/ttyUSB1")
-    k = KEITHLEY6517("ASRL/dev/ttyUSB0::INSTR", baud_rate = 19200, sleep = 0.05)
+    cp = COLDPLATE("/dev/ttyUSB0")
+    k = KEITHLEY6517("ASRL/dev/ttyUSB1::INSTR", baud_rate = 19200, sleep = 0.05)
     cpx = CPX400SP('192.168.1.131', 9221)
 
     # Functions
