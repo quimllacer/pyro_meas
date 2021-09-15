@@ -6,15 +6,16 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.optimize import leastsq
+from scipy.optimize import leastsq, curve_fit
 from scipy.signal import hilbert
 from datetime import datetime
 from general_functions import new_datefolder
 from scipy.signal import correlate, correlation_lags, detrend
 
-file = r"/Users/joaquinllacerwintle/OneDrive - ETH Zurich/pyroelectric measurements/data/20210903/01h27m58s_test_poled_pvdf_inverted_pol_20000s_TEMP_1a0.01f0.002s80o.xlsx"
+file = r"/Users/joaquinllacerwintle/OneDrive - ETH Zurich/data/important data/Corona poled PVDF PtoN second cycle.xlsx"
 df = pd.read_excel(file, engine = "openpyxl")[["time", "current", "ext_temp"]] # Skip intital rows
 
+df = df.iloc[::10, :] # Take 1 out of nth rows
 # df["current"] = df["current"].rolling(30, center = True).mean()
 # df["ext_temp"] = df["ext_temp"].rolling(3, center = True).mean()
 df = df.dropna()
@@ -26,7 +27,7 @@ B = df["current"]
 timedeltas = [t[i-1] - t[i] for i in range(1, len(t))]
 sampling_rate = abs(sum(timedeltas))/len(timedeltas)
 freq = 0.01
-window = int(1/(freq*sampling_rate))
+window = int(2/(freq*sampling_rate))
 if window % 2 == 0:
     window += 1
 print(window)
@@ -49,29 +50,34 @@ def xcorr(A, B):
 def sine(A, t):
     guess_amp = 1
     guess_freq = 0.01
-    guess_phase = 0
+    guess_slope = 0
     guess_offset = np.mean(A)
-    optimize_func = lambda x: (x[0]*np.sin(2*np.pi*freq*t+x[1]) + x[2] - A)
-    est_amp, est_phase, est_offset = leastsq(optimize_func, [guess_amp, guess_phase, guess_offset])[0]
-    data_fit = est_amp*np.sin(2*np.pi*freq*t+est_phase) + est_offset
-    return data_fit
-
-
+    optimize_func = lambda x: (x[0]*np.sin(2*np.pi*x[1]*t) + x[2] + t*x[3] - A)
+    est_amp, est_freq, est_offset, est_slope = leastsq(optimize_func, [guess_amp, guess_freq, guess_offset, guess_slope])[0]
+    data_fit = est_amp*np.sin(2*np.pi*freq*t) + est_offset
+    return est_amp
 
 time_phase = []
 for i in range(len(A)):
     margin = int((window-1)/2)
     assert(window % 2 == 1)
     if margin <= i < len(A)-margin:
+        tim = t[i-margin:i+margin].copy()
         Ax = A[i-margin:i+margin].copy()
         Bx = B[i-margin:i+margin].copy()
+
+        current_amplitude = abs(sine(Bx, tim))
 
         Ax -= Ax.mean(); Ax /= Ax.std(); Ax = detrend(Ax)
         Bx -= Bx.mean(); Bx /= Bx.std(); Bx = detrend(Bx)
 
         phase = hil(Ax, Bx)
+        electrode_area = 240e-6
+        frequency = 0.01
+        T_amp = 1
+        p_coeff = (np.sin(math.radians(phase))*current_amplitude) / (electrode_area* 2*np.pi*frequency*T_amp)
         ti = t[i]
-        time_phase.append([ti, phase])
+        time_phase.append([ti, phase, current_amplitude, p_coeff])
 
         # plt.plot(t[i-margin:i+margin], Ax)
         # plt.plot(t[i-margin:i+margin], Bx)
@@ -79,19 +85,20 @@ for i in range(len(A)):
         #plt.ylim([-200E-12, 200E-12])
         plt.show()
 
-out = pd.DataFrame(time_phase, columns = ["time", "phase"])
+out = pd.DataFrame(time_phase, columns = ["time", "phase", "amplitude", "p_coeff"])
+out = out.iloc[::50, :] # Take 1 out of nth rows
 print(out)
+out.to_excel("processed_data.xlsx")
 print("Mean phase shift: {}".format(abs(out.phase).mean()))
 
-A -= A.mean(); A /= A.std(); A = detrend(A)
-B -= B.mean(); B /= B.std(); B = detrend(B)
-# out["phase"] -= out["phase"].mean()
-
-plt.plot(t, A)
-plt.plot(t, B)
-plt.plot(out["time"], abs(out["phase"]))
-# plt.xlim([2000, 5000])
-plt.ylim([-180, 180])
+fig, axs = plt.subplots(5, sharex=True, sharey=False)
+fig.suptitle('Plot name')
+axs[0].plot(t, A)
+axs[1].plot(t, B)
+axs[2].plot(out["time"], out["phase"])
+axs[3].plot(out["time"], out["amplitude"])
+axs[4].plot(out["time"], out["p_coeff"])
+axs[2].set_yticks([-180, -90, 0, 90, 180])
 plt.show()
 
 

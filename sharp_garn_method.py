@@ -221,13 +221,9 @@ def main():
                                offset = temp_offset-temp_margin))
 
     # Define measurement file name
-    name = "/{}_{}_{}s_TEMP_{}a{}f{}s{}o".format(datetime.now().strftime("%Hh%Mm%Ss"),
-                                               sample_identification,
+    name = "/{}_{}s_{}".format(datetime.now().strftime("%Hh%Mm%Ss"),
                                                loop_time,
-                                               temp_ampl,
-                                               temp_freq,
-                                               temp_slope,
-                                               temp_offset)
+                                               sample_identification)
     file_name = new_datefolder("../data") + name
     # Save the data
     df = pd.DataFrame(data, columns = ["current",
