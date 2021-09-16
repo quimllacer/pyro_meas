@@ -1,4 +1,3 @@
-# PID for the for the thermoelectric heater-cooler (peltier element)
 import sys
 import time
 import math
@@ -11,27 +10,30 @@ from scipy.signal import hilbert
 from datetime import datetime
 from general_functions import new_datefolder
 from scipy.signal import correlate, correlation_lags, detrend
+import ntpath
+import seaborn as sns
+sns.set_style("ticks")
 
-file = r"/Users/joaquinllacerwintle/OneDrive - ETH Zurich/data/important data/Corona poled PVDF PtoN second cycle.xlsx"
-df = pd.read_excel(file, engine = "openpyxl")[["time", "current", "ext_temp"]] # Skip intital rows
+file = r"/Users/joaquinllacerwintle/OneDrive - ETH Zurich/data/20210916/07h38m31s_25000s_pvdf PtoP 3rd cycle.xlsx"
+file_name = ntpath.basename(file)
+df = pd.read_excel(file, engine = "openpyxl")[["time", "current", "ext_temp"]]
 
-df = df.iloc[::10, :] # Take 1 out of nth rows
-# df["current"] = df["current"].rolling(30, center = True).mean()
-# df["ext_temp"] = df["ext_temp"].rolling(3, center = True).mean()
-df = df.dropna()
+#SAMPLE to reduce file size ########################################
+points_p_period = 10 # 10 points per period should be more than enough.
+freq = 0.01
+window = 51 # Analysis window e.g. if points_per_period = 10 then window = 51 equals 5 periods.
+exp_time = df["time"].iloc[-1]
+sampling_rate = exp_time/len(df["time"])
+periods = exp_time/(1/freq)
+sample_size = periods * points_p_period
+ratio = int(len(df["time"])/sample_size)
+df = df.iloc[::ratio, :]
 
 t = np.array(df["time"])
 A = df["ext_temp"]
 B = df["current"]
 
-timedeltas = [t[i-1] - t[i] for i in range(1, len(t))]
-sampling_rate = abs(sum(timedeltas))/len(timedeltas)
-freq = 0.01
-window = int(2/(freq*sampling_rate))
-if window % 2 == 0:
-    window += 1
-print(window)
-
+#FUNCTIONS #########################################################
 def hil(A, B):
     A_h = hilbert(A)
     B_h = hilbert(B)
@@ -57,7 +59,7 @@ def sine(A, t):
     data_fit = est_amp*np.sin(2*np.pi*freq*t) + est_offset
     return est_amp
 
-time_phase = []
+analyzed_data = []
 for i in range(len(A)):
     margin = int((window-1)/2)
     assert(window % 2 == 1)
@@ -66,6 +68,9 @@ for i in range(len(A)):
         Ax = A[i-margin:i+margin].copy()
         Bx = B[i-margin:i+margin].copy()
 
+        ti = t[i]
+        temp = np.array(A)[i]
+        current = np.array(B)[i]
         current_amplitude = abs(sine(Bx, tim))
 
         Ax -= Ax.mean(); Ax /= Ax.std(); Ax = detrend(Ax)
@@ -76,29 +81,30 @@ for i in range(len(A)):
         frequency = 0.01
         T_amp = 1
         p_coeff = (np.sin(math.radians(phase))*current_amplitude) / (electrode_area* 2*np.pi*frequency*T_amp)
-        ti = t[i]
-        time_phase.append([ti, phase, current_amplitude, p_coeff])
+        analyzed_data.append([ti, temp, current, phase, current_amplitude, p_coeff])
 
-        # plt.plot(t[i-margin:i+margin], Ax)
-        # plt.plot(t[i-margin:i+margin], Bx)
-        # plt.ylim([70, 130])
-        #plt.ylim([-200E-12, 200E-12])
-        plt.show()
-
-out = pd.DataFrame(time_phase, columns = ["time", "phase", "amplitude", "p_coeff"])
-out = out.iloc[::50, :] # Take 1 out of nth rows
+out = pd.DataFrame(analyzed_data, columns = ["time", "temperature", "current", "phase", "amplitude", "p_coeff"])
 print(out)
-out.to_excel("processed_data.xlsx")
+savename = "/Users/joaquinllacerwintle/OneDrive - ETH Zurich/data/pyro_meas/important data/analyzed/" + file_name
+out.to_excel(savename)
 print("Mean phase shift: {}".format(abs(out.phase).mean()))
 
-fig, axs = plt.subplots(5, sharex=True, sharey=False)
-fig.suptitle('Plot name')
-axs[0].plot(t, A)
-axs[1].plot(t, B)
-axs[2].plot(out["time"], out["phase"])
-axs[3].plot(out["time"], out["amplitude"])
-axs[4].plot(out["time"], out["p_coeff"])
-axs[2].set_yticks([-180, -90, 0, 90, 180])
+fig, axs = plt.subplots(2, figsize=(10,4), sharex=True, sharey=False)
+fig.suptitle(file_name)
+ax0, ax1, ax2, ax3 = axs[0], axs[0].twinx(), axs[1], axs[1].twinx()
+ax0.plot(out["time"], out["temperature"], color = "blue")
+ax1.plot(out["time"], out["current"]*1e9, color = "red")
+ax2.plot(out["time"], out["phase"], color = "black")
+ax3.plot(out["time"], out["p_coeff"]*1e6, color = "green")
+#ax4.plot(out["time"], out["amplitude"], color = "pink")
+ax0.set_yticks([75, 85, 95, 105, 115, 125, 135])
+ax1.set_yticks(np.linspace(-20, 20, 9))
+ax2.set_yticks(np.linspace(-180, 180, 9))
+ax3.set_yticks(np.linspace(-100, 100, 9))
+ax0.set_ylabel('Temperature (°C)')
+ax1.set_ylabel('Current (nA)')
+ax2.set_ylabel('Phase shift (°)')
+ax3.set_ylabel('p ($\mathregular{µC K^{-1} m^{-2}}$)')
 plt.show()
 
 
