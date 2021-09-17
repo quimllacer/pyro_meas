@@ -30,21 +30,21 @@ def main():
 
     # Set parameters
     # *********************************************************************************
-    sample_identification = "test_poled_pvdf_inverted_pol"
-    setup_time = 3*60 # Time allowed to the Coldplate to reach thermal the temperature offset.
-    loop_time = 1800  # Time that current vs temperature will be measured.
+    sample_identification = "pvdf ptop new sample_second cycle"
+    setup_time = 60*5 # Time allowed to the Coldplate to reach thermal the temperature offset.
+    loop_time = 25000  # Time that current vs temperature will be measured.
     # Temperature function
     temp_ampl = 1
     temp_freq = 0.01
     temp_slope = 0.002
     temp_offset = 80
     # Keithley
-    current_range = 20E-9 # Upper current range limit.
+    current_range = 200E-9 # Upper current range limit.
     nplcycles = 1 # Integration period based on power line frequency (0.01-10)
     average_window = 0 # Average filter window
     # Peltier cell
     peltier_status = "active"
-    pelt_limit_voltage = 5
+    pelt_limit_voltage = 7
     pelt_limit_current = 4
     P, I, D = (0.6, 0.03, 0.05) #Good PID values are 0.6, 0.03, 0.05
     # *********************************************************************************
@@ -163,7 +163,7 @@ def main():
         if past_time > setup_time/2:
             pelt_voltage = pid(ext_temp)
             if pelt_voltage > pelt_limit_voltage:
-                pelt_voltage = pelt_limit_voltage
+                pelt_voltage = pelt_limit_voltage-3
             cpx.set_voltage(pelt_voltage)
         print(reading)
 
