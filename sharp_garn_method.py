@@ -20,7 +20,7 @@ from simple_pid import PID
 import matplotlib.pyplot as plt
 
 from general_functions import new_datefolder
-
+from data_analysis import analyze
 from keithley6517_commands import KEITHLEY6517
 from coldplate_commands import COLDPLATE
 from cpx400sp import CPX400SP
@@ -30,9 +30,9 @@ def main():
 
     # Set parameters
     # *********************************************************************************
-    sample_identification = "test_poled_pvdf_inverted_pol"
+    sample_identification = "test"
     setup_time = 3*60 # Time allowed to the Coldplate to reach thermal the temperature offset.
-    loop_time = 1800  # Time that current vs temperature will be measured.
+    loop_time = 60*10  # Time that current vs temperature will be measured.
     # Temperature function
     temp_ampl = 1
     temp_freq = 0.01
@@ -247,6 +247,9 @@ def main():
     #df = df.rolling(window = 5, min_periods = 5, axis = 0).mean()
     #df.to_csv('test.csv', header=False, index=False)
     df.to_excel('{}.xlsx'.format(file_name))
+    analyzed_data = analyze(df, points_p_period = 10, freq = 0.01, window = 11)
+    analyzed_data.to_excel('{}.xlsx'.format(file_name + "ANALYZED"))
+
 
     # Print statistics
     print("######################################################################")
