@@ -84,7 +84,7 @@ def analyze(df, points_p_period = 10, freq = 0.01, window = 51 ):
     out = pd.DataFrame(analyzed_data, columns = ["time", "temperature", "current", "phase", "amplitude", "p_coeff"])
 
     fig, axs = plt.subplots(2, figsize=(10,4), sharex=True, sharey=False)
-    fig.suptitle(file_name)
+    #fig.suptitle(file_name)
     ax0, ax1, ax2, ax3 = axs[0], axs[0].twinx(), axs[1], axs[1].twinx()
     ax0.plot(out["time"], out["temperature"], color = "blue")
     ax1.plot(out["time"], out["current"]*1e9, color = "red")
