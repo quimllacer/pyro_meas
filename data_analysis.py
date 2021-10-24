@@ -99,9 +99,9 @@ def analyze(df, points_p_period = 10, freq = 0.01, window = 51 ):
     ax1.set_ylabel('Current (nA)')
     ax2.set_ylabel('Phase shift (°)')
     ax3.set_ylabel('p ($\mathregular{µC K^{-1} m^{-2}}$)')
-    plt.show()
+    # plt.show()
 
-    return out
+    return out, fig
 
 
 
