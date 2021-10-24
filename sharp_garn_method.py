@@ -18,6 +18,7 @@ import pyvisa as visa
 from datetime import datetime
 from simple_pid import PID
 import matplotlib.pyplot as plt
+import csv
 
 from general_functions import new_datefolder
 from data_analysis import analyze
@@ -30,16 +31,16 @@ def main():
 
     # Set parameters
     # *********************************************************************************
-    sample_identification = "test"
-    setup_time = 3*60 # Time allowed to the Coldplate to reach thermal the temperature offset.
-    loop_time = 60*10  # Time that current vs temperature will be measured.
+    sample_identification = "poled-pvdf-test2"
+    setup_time = 5*60 # Time allowed to the Coldplate to reach  the temperature offset.
+    loop_time = 52500  # Time that current vs temperature will be measured.
     # Temperature function
     temp_ampl = 1
     temp_freq = 0.01
     temp_slope = 0.002
-    temp_offset = 80
+    temp_offset = 25
     # Keithley
-    current_range = 20E-9 # Upper current range limit.
+    current_range = 200E-9 # Upper current range limit.
     nplcycles = 1 # Integration period based on power line frequency (0.01-10)
     average_window = 0 # Average filter window
     # Peltier cell
@@ -134,6 +135,12 @@ def main():
         sampling_rate = abs(sum(timedeltas))/len(timedeltas)
         print("Sampling rate was: {} ms".format(round(sampling_rate*1000, 3)))
 
+    # Define measurement file name
+    name = "/{}_{}s_{}".format(datetime.now().strftime("%Hh%Mm%Ss"),
+                                               loop_time,
+                                               sample_identification)
+    file_name = new_datefolder("../data") + name
+    
     # Setup peltier element
     print("Setting up peltier element...")
     pid = PID(P, I, D, setpoint=temp_offset, sample_time = 0.1)
@@ -190,7 +197,7 @@ def main():
         reading.insert(3, round(pelt_voltage, 3))
         reading.insert(3, round(new_target_temp, 3))
         reading.insert(3, round(cp.get_tempActual(), 3))
-        data.append(reading)
+        # data.append(reading)
         print(reading)
 
 
@@ -219,14 +226,13 @@ def main():
                                amplitude = cp_temp_ampl,
                                slope = temp_slope,
                                offset = temp_offset-temp_margin))
+        with open('{}.csv'.format(file_name), 'a') as fd:
+            writer = csv.writer(fd)
+            writer.writerow(reading)
 
-    # Define measurement file name
-    name = "/{}_{}s_{}".format(datetime.now().strftime("%Hh%Mm%Ss"),
-                                               loop_time,
-                                               sample_identification)
-    file_name = new_datefolder("../data") + name
+    
     # Save the data
-    df = pd.DataFrame(data, columns = ["current",
+    df = pd.read_csv('{}.csv'.format(file_name), names = ["current",
                                        "time",
                                        "ext_temp",
                                        "int_temp",
@@ -245,10 +251,11 @@ def main():
              "pelt_curr",
              "vsource"]]
     #df = df.rolling(window = 5, min_periods = 5, axis = 0).mean()
-    #df.to_csv('test.csv', header=False, index=False)
-    df.to_excel('{}.xlsx'.format(file_name))
-    analyzed_data = analyze(df, points_p_period = 10, freq = 0.01, window = 11)
+#     df.to_csv('{}.csv'.format(file_name), header=False, index=False)
+    #df.to_excel('{}.xlsx'.format(file_name))
+    analyzed_data, figure = analyze(df, points_p_period = 10, freq = 0.01, window = 51)
     analyzed_data.to_excel('{}.xlsx'.format(file_name + "ANALYZED"))
+    figure.savefig('{}.png'.format(file_name + "ANALYZED"))
 
 
     # Print statistics
