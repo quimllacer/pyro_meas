@@ -9,6 +9,8 @@
 
 #!/usr/bin/env python3
 
+#manual page 39 ans 198
+
 import sys
 import time
 import os
@@ -31,8 +33,8 @@ def main():
 
     # Set parameters
     # *********************************************************************************
-    sample_identification = "pvdf-iotd_1mg" #Give name to experiment
-    setup_time = 300 # Time allowed to the Coldplate to reach  the temperature offset.
+    sample_identification = "poled-pvdf-ptop" #Give name to experiment
+    setup_time = 6*60 # Time allowed to the Coldplate to reach  the temperature offset.
     loop_time = 52500  # Time that current vs temperature will be measured.
     # Temperature function (temp_amp * sin(2*pi*temp_freq*time) + temp_slope*time + temp_offset)
     temp_ampl = 1
@@ -40,7 +42,7 @@ def main():
     temp_slope = 0.002
     temp_offset = 25
     # Keithley
-    current_range = 200E-9 # Upper current range limit.
+    voltage_range = 200 # Upper current range limit.
     nplcycles = 1 # Integration period based on power line frequency (0.01-10)
     average_window = 0 # Average filter window
     # Peltier cell
@@ -54,33 +56,37 @@ def main():
     assert loop_time*temp_slope < 131-temp_offset
 
     # Initiate communication with the devices
-    cp = COLDPLATE("/dev/ttyUSB1")
-    k = KEITHLEY6517("ASRL/dev/ttyUSB2::INSTR", baud_rate = 19200, sleep = 0.05)
+    cp = COLDPLATE("/dev/ttyUSB0")
+    k = KEITHLEY6517("ASRL/dev/ttyUSB1::INSTR", baud_rate = 19200, sleep = 0.05)
     cpx = CPX400SP('192.168.1.131', 9221)
 
     # Functions
-    def setup_keithley(current_range, nplcycles, average_window):
+    def setup_keithley(voltage_range, nplcycles, average_window):
         # Reset device to defaults
         k.reset()
         k.clear_reg()
         k.status_queue_next("Reset")
 
         # Select sensing function
-        k.sense_function("'current'")
+        k.sense_function("'voltage'")
         k.status_queue_next("Sensing function")
+                
+        # Voltage guard
+        k.voltage_guard_state("OFF")
+        k.status_queue_next("Voltage guard")
 
         # Zero correct
-        k.current_range(20E-12)
+        k.voltage_range(2)
         k.system_zcorrect("ON")
         k.status_queue_next("Zero correct")
 
         # Select measurement range of interest
-        k.current_range(current_range)
+        k.voltage_range(voltage_range)
         k.system_zcheck("OFF")
         k.status_queue_next("Current range")
 
         # Integration time
-        k.current_nplcycles(nplcycles)
+        k.voltage_nplcycles(nplcycles)
         k.system_pwrlinesync("OFF")
         k.status_queue_next("Integration time")
 
@@ -91,8 +97,8 @@ def main():
         k.status_queue_next("Timestamp")
 
         # Median filter
-        k.current_median_state("ON")
-        k.current_median_rank(1)
+        k.voltage_median_state("ON")
+        k.voltage_median_rank(1)
         k.status_queue_next("Median filter")
 
         # Average filter
@@ -138,7 +144,7 @@ def main():
         print("Sampling rate was: {} ms".format(round(sampling_rate*1000, 3)))
 
     # Define measurement file name
-    name = "/{}_{}s_{}".format(datetime.now().strftime("%Hh%Mm%Ss"),
+    name = "/{}_{}s_{}_voltage".format(datetime.now().strftime("%Hh%Mm%Ss"),
                                                loop_time,
                                                sample_identification)
     file_name = new_datefolder("../data") + name
@@ -151,7 +157,6 @@ def main():
         cpx.set_current(pelt_limit_current)
         cpx.set_voltage(0)
         temp_margin = 5
-        pelt_voltage = 0
     else:
         cpx.set_output(0)
         temp_margin = 0
@@ -163,35 +168,20 @@ def main():
     cp.set_tempTarget(temp_offset-temp_margin)
     cp.set_tempOn()
     print("Setting up the electrometer...")
-    setup_keithley(current_range = current_range, nplcycles = 1, average_window = average_window)
+    setup_keithley(voltage_range = voltage_range, nplcycles = 1, average_window = average_window)
     print("Wait until starting temperature is reached...")
     past_time = 0
-    setup_data = []
     while past_time < setup_time:
-        reading = k.read_latest()
-        past_time = reading[1]
-        ext_temp = reading[2]
+        reading = k.read_latest()[1:3]
+        past_time = reading[0]
+        ext_temp = reading[1]
         if past_time > setup_time/2:
-            pid = PID(P*(3/4), I*40, D, setpoint=temp_offset, sample_time = 0.1) #PID adjusted to avoid overshooting at the start.
             pelt_voltage = pid(ext_temp)
             if pelt_voltage > pelt_limit_voltage:
                 pelt_voltage = pelt_limit_voltage
             cpx.set_voltage(pelt_voltage)
-        reading.insert(3, float(cpx.get_current()[:-2]))
-        reading.insert(3, float(cpx.get_voltage()[:-2]))
-        reading.insert(3, round(pelt_voltage, 3))
-        reading.insert(3, round(new_target_temp,  3))
-        reading.insert(3, round(cp.get_tempActual(), 3))
-        setup_data.append(reading)
-        print("Setting up...   ", reading)
-        
-    setup_data_df = pd.DataFrame(setup_data)
-    plt.scatter(setup_data_df.iloc[:,1], setup_data_df.iloc[:,2])
-    plt.axhline(y = temp_offset, color='r', linestyle='-')
-    plt.savefig('{}.png'.format(file_name + "SETUP"))
-    del setup_data, setup_data_df
-        
-    pid = PID(P, I, D, setpoint=temp_offset, sample_time = 0.1)
+        print(reading)
+
     cp.set_tempLimiterMax(99)
     cp.set_tempLimiterMin(-10)
     k.system_tstamp_relative_reset()
@@ -250,7 +240,7 @@ def main():
 
     
     # Save the data
-    df = pd.read_csv('{}.csv'.format(file_name), names = ["current",
+    df = pd.read_csv('{}.csv'.format(file_name), names = ["voltage",
                                        "time",
                                        "ext_temp",
                                        "int_temp",
@@ -260,7 +250,7 @@ def main():
                                        "pelt_curr",
                                        "vsource"])
     df = df[["time",
-             "current",
+             "voltage",
              "int_temp",
              "ext_temp",
              "new_target_temp",
@@ -279,7 +269,7 @@ def main():
     # Print statistics
     print("######################################################################")
     reading_period(df, "time")
-    print("Measured current mean: {}    std: {}".format(df.current.mean(), df.current.std()))
+    print("Measured voltage mean: {}    std: {}".format(df.voltage.mean(), df.voltage.std()))
     print("######################################################################")
     print("File name: " + file_name)
 

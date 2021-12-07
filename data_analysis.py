@@ -68,6 +68,8 @@ def analyze(df, points_p_period = 10, freq = 0.01, window = 51 ):
 
             ti = t[i]
             temp = np.array(A)[i]
+            temp_amplitude = abs(sine(Ax, tim))
+            T_amp = np.mean(temp_amplitude)
             current = np.array(B)[i]
             current_amplitude = abs(sine(Bx, tim))
 
@@ -77,21 +79,24 @@ def analyze(df, points_p_period = 10, freq = 0.01, window = 51 ):
             phase = hil(Ax, Bx)
             electrode_area = 240e-6
             frequency = 0.01
-            T_amp = 1
+            # T_amp = 1
             p_coeff = (np.sin(math.radians(phase))*current_amplitude) / (electrode_area* 2*np.pi*frequency*T_amp)
-            analyzed_data.append([ti, temp, current, phase, current_amplitude, p_coeff])
+            analyzed_data.append([ti, temp, current, phase, current_amplitude, p_coeff, temp_amplitude])
 
-    out = pd.DataFrame(analyzed_data, columns = ["time", "temperature", "current", "phase", "amplitude", "p_coeff"])
-
+    out = pd.DataFrame(analyzed_data, columns = ["time", "temperature", "current", "phase", "amplitude", "p_coeff", "temp_amplitude"])
+    out["current"] = out["current"]*1e9
+    out["amplitude"] = out["amplitude"]*1e9
+    out["p_coeff"] = out["p_coeff"]*1e6
+    
     fig, axs = plt.subplots(2, figsize=(10,4), sharex=True, sharey=False)
     #fig.suptitle(file_name)
     ax0, ax1, ax2, ax3 = axs[0], axs[0].twinx(), axs[1], axs[1].twinx()
     ax0.plot(out["time"], out["temperature"], color = "blue")
-    ax1.plot(out["time"], out["current"]*1e9, color = "red")
+    ax1.plot(out["time"], out["current"], color = "red")
     ax2.plot(out["time"], out["phase"], color = "black")
-    ax3.plot(out["time"], out["p_coeff"]*1e6, color = "green")
+    ax3.plot(out["time"], out["p_coeff"], color = "green")
     #ax4.plot(out["time"], out["amplitude"], color = "pink")
-    ax0.set_yticks([75, 85, 95, 105, 115, 125, 135])
+    ax0.set_yticks([20, 40, 60, 80, 100, 120, 140])
     ax1.set_yticks(np.linspace(-20, 20, 9))
     ax2.set_yticks(np.linspace(-180, 180, 9))
     ax3.set_yticks(np.linspace(-100, 100, 9))

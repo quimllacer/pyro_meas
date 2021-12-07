@@ -5,7 +5,7 @@ import csv
 from data_analysis import analyze
 
 
-file_name = "/Users/joaquinllacerwintle/OneDrive - ETH Zurich/data/21h48m52s_52500s_poled-pvdf-test (1)"
+file_name = "/home/pi/Desktop/test/17h52m30s_52500s_pvdf-iotd_1mg"
 
 df = pd.read_csv('{}.csv'.format(file_name), names = ["current",
                                    "time",
