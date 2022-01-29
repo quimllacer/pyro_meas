@@ -31,14 +31,14 @@ def main():
 
     # Set parameters
     # *********************************************************************************
-    sample_identification = "pvdf-iotd_1mg" #Give name to experiment
-    setup_time = 300 # Time allowed to the Coldplate to reach  the temperature offset.
-    loop_time = 52500  # Time that current vs temperature will be measured.
+    sample_identification = "joaquim_circular100_poledwithoutelectrodes(2)" #Give name to experiment
+    setup_time = 500 # Time allowed to the Coldplate to reach  the temperature offset.
+    loop_time = 20000 # Time that current vs temperature will be measured.
     # Temperature function (temp_amp * sin(2*pi*temp_freq*time) + temp_slope*time + temp_offset)
     temp_ampl = 1
     temp_freq = 0.01
     temp_slope = 0.002
-    temp_offset = 25
+    temp_offset = 80
     # Keithley
     current_range = 200E-9 # Upper current range limit.
     nplcycles = 1 # Integration period based on power line frequency (0.01-10)
