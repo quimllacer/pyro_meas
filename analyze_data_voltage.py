@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 import csv
 
-from data_analysis import analyze
+from data_analysis_voltage import analyze
 
 
-file_name = "/Users/joaquinllacerwintle/Downloads/15h44m37s_22500s_10dot2dot1_5min_1kv_thin_pure"
+file_name = "/Users/joaquinllacerwintle/OneDrive - ETH Zurich/data/21h48m52s_52500s_poled-pvdf-test (1)"
 
 df = pd.read_csv('{}.csv'.format(file_name), names = ["current",
                                    "time",
