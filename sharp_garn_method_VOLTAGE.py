@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import csv
 
 from general_functions import new_datefolder
-from data_analysis import analyze
+from data_postprocessing import analyze
 from keithley6517_commands import KEITHLEY6517
 from coldplate_commands import COLDPLATE
 from cpx400sp import CPX400SP
@@ -36,6 +36,7 @@ def main():
     sample_identification = "poled-pvdf-ptop" #Give name to experiment
     setup_time = 6*60 # Time allowed to the Coldplate to reach  the temperature offset.
     loop_time = 52500  # Time that current vs temperature will be measured.
+    electrode_area = 240e-6 # Area of each measurment electrode in m2.
     # Temperature function (temp_amp * sin(2*pi*temp_freq*time) + temp_slope*time + temp_offset)
     temp_ampl = 1
     temp_freq = 0.01
@@ -261,7 +262,7 @@ def main():
     #df = df.rolling(window = 5, min_periods = 5, axis = 0).mean()
 #     df.to_csv('{}.csv'.format(file_name), header=False, index=False)
     #df.to_excel('{}.xlsx'.format(file_name))
-    analyzed_data, figure = analyze(df, points_p_period = 10, freq = 0.01, window = 51)
+    analyzed_data, figure = analyze(df = df, electrode_area = electrode_area, points_p_period = 10, freq = 0.01, window = 51)
     analyzed_data.to_excel('{}.xlsx'.format(file_name + "ANALYZED"))
     figure.savefig('{}.png'.format(file_name + "ANALYZED"))
 

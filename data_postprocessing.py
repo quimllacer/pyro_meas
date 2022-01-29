@@ -14,7 +14,7 @@ import ntpath
 import seaborn as sns
 sns.set_style("ticks")
 
-def analyze(df, points_p_period = 10, freq = 0.01, window = 51 ):
+def analyze(df, electrode_area, points_p_period = 10, freq = 0.01, window = 51 ):
     print("analyzing data...")
 
     df = df[["time", "current", "ext_temp"]]
@@ -77,7 +77,6 @@ def analyze(df, points_p_period = 10, freq = 0.01, window = 51 ):
             Bx -= Bx.mean(); Bx /= Bx.std(); Bx = detrend(Bx)
 
             phase = hil(Ax, Bx)
-            electrode_area = 240e-6
             frequency = 0.01
             # T_amp = 1
             p_coeff = (np.sin(math.radians(phase))*current_amplitude) / (electrode_area* 2*np.pi*frequency*T_amp)
